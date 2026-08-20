@@ -1,6 +1,6 @@
 # Benchmark Report
 
-- Generated: 2026-08-20 16:06 UTC
+- Generated: 2026-08-20 16:47 UTC
 - Tracing backend: `local`
 - Queries: 3
 
@@ -8,8 +8,8 @@
 
 | Run | Latency (s) | Cost (USD) | Quality | Citation cov. | Failure rate | Notes |
 |---|---:|---:|---:|---:|---:|---|
-| single-agent | 0.00 | 0.0000 | 9.0 | 100% | 0% | 3 queries; total tokens 2758 |
-| multi-agent | 0.07 | 0.0000 | 10.0 | 100% | 0% | 3 queries; total tokens 11589 |
+| single-agent | 5.95 | 0.0008 | 8.7 | 100% | 0% | 3 queries; total tokens 2374 |
+| multi-agent | 14.66 | 0.0022 | 9.7 | 100% | 0% | 3 queries; total tokens 7638 |
 
 ## Query set
 
@@ -23,73 +23,91 @@
 
 - **Query:** Research GraphRAG state-of-the-art and write a 500-word summary
   - Routes: `baseline`
-  - LLM calls: 1, tokens in/out: 505/414
-  - Sources: 5, answer chars: 2178
+  - LLM calls: 1, tokens in/out: 443/394
+  - Sources: 5, answer chars: 2775
   - Errors: none
 - **Query:** Compare single-agent and multi-agent workflows for customer support
   - Routes: `baseline`
-  - LLM calls: 1, tokens in/out: 507/416
-  - Sources: 5, answer chars: 2179
+  - LLM calls: 1, tokens in/out: 436/397
+  - Sources: 5, answer chars: 2794
   - Errors: none
 - **Query:** Summarize production guardrails for LLM agents
   - Routes: `baseline`
-  - LLM calls: 1, tokens in/out: 504/412
-  - Sources: 5, answer chars: 2166
+  - LLM calls: 1, tokens in/out: 444/260
+  - Sources: 5, answer chars: 1930
   - Errors: none
 
 ### multi-agent
 
 - **Query:** Research GraphRAG state-of-the-art and write a 500-word summary
   - Routes: `researcher -> analyst -> writer -> critic -> done`
-  - LLM calls: 3, tokens in/out: 2509/1357
-  - Sources: 5, answer chars: 2351
+  - LLM calls: 3, tokens in/out: 1874/794
+  - Sources: 5, answer chars: 2151
   - Errors: none
 - **Query:** Compare single-agent and multi-agent workflows for customer support
   - Routes: `researcher -> analyst -> writer -> critic -> done`
-  - LLM calls: 3, tokens in/out: 2521/1365
-  - Sources: 5, answer chars: 2356
+  - LLM calls: 3, tokens in/out: 1730/711
+  - Sources: 5, answer chars: 1933
   - Errors: none
 - **Query:** Summarize production guardrails for LLM agents
   - Routes: `researcher -> analyst -> writer -> critic -> done`
-  - LLM calls: 3, tokens in/out: 2494/1343
-  - Sources: 5, answer chars: 2322
+  - LLM calls: 3, tokens in/out: 1779/750
+  - Sources: 5, answer chars: 1947
   - Errors: none
 
 ## Analysis
 
-Multi-agent took 315.54x the baseline latency, cost +0.0000 USD more across the query set, and scored +1.00 on the heuristic quality proxy. Quality here is a heuristic (length, citation coverage, analysis pass, term coverage), not a human rubric - use peer review for the final judgement.
+Multi-agent took 2.46x the baseline latency, cost +0.0013 USD more across the query set, and scored +0.94 on the heuristic quality proxy. Quality here is a heuristic (length, citation coverage, analysis pass, term coverage), not a human rubric - use peer review for the final judgement.
 
 ## Reading these numbers
 
-The committed run used the **offline backends** (`OPENAI_API_KEY` and `TAVILY_API_KEY`
-unset), so:
+The committed run used **OpenRouter** (`OPENAI_BASE_URL=https://openrouter.ai/api/v1`,
+model `openai/gpt-4o-mini`) for the LLM, the **mock search corpus** for retrieval
+(no `TAVILY_API_KEY`), and local JSON tracing (no LangSmith key). So:
 
-- **Cost is 0.00 USD** for both arms. Token counts are real (estimated at ~4 chars per
-  token) but no provider was billed. With `gpt-4o-mini` pricing, the token volume above
-  works out to roughly 3x baseline cost for the multi-agent arm — three LLM calls instead
-  of one.
-- **Latency ratio is not representative.** Offline completions return in microseconds, so
-  what the multi-agent arm actually measures is graph compilation plus orchestration
-  overhead. With a real provider, latency is dominated by the 3 sequential LLM calls, so
-  expect ~2.5-3x the baseline, not the ratio printed above.
+- **Cost is real**, taken from the `usage.cost` OpenRouter reports per call - not an
+  estimate from the price table.
+- **Latency is real** and dominated by sequential LLM calls: the multi-agent arm makes
+  three of them (researcher, analyst, writer) plus a free deterministic critic pass,
+  against one for the baseline.
+- **Retrieval is still mocked**, so citation coverage says "the writer cited what it was
+  given", not "the sources are good". Add a Tavily key to test real retrieval.
 - **Quality is a heuristic proxy** (length, citation coverage, analysis pass, query-term
   coverage), not a human judgement. Use `docs/peer_review_rubric.md` for the real score.
 
-Re-run with keys in `.env` to get billable numbers: `python -m multi_agent_research_lab.cli benchmark`.
+Measured over the 3 queries in `configs/lab_default.yaml` (the run committed in
+`reports/benchmark_report.md`; latency moves roughly +/-10% between runs, the token and
+cost ratios are stable):
+
+| | single-agent | multi-agent | ratio |
+|---|---:|---:|---:|
+| Latency (avg, s) | 5.95 | 14.66 | 2.46x |
+| Cost (total, USD) | 0.0008 | 0.0022 | 2.75x |
+| Tokens (total) | 2374 | 7638 | 3.22x |
+| Quality (heuristic 0-10) | 8.7 | 9.7 | +1.0 |
+| Citation coverage | 100% | 100% | = |
+| Failure rate | 0% | 0% | = |
 
 ## What multi-agent bought, and what it cost
 
 | Dimension | Single-agent | Multi-agent |
 |---|---|---|
 | LLM calls per query | 1 | 3 (+1 free deterministic critic pass) |
+| Measured price of that | 0.0008 USD / 6.0s | 0.0022 USD / 14.7s |
 | Failure surface | one call fails, the run fails | any worker can fail and the run still returns a degraded answer |
 | Debuggability | one opaque output | `route_history` + per-step trace attributes the failure to one agent |
 | Citation discipline | prompt-only | prompt + writer post-processing + critic validation |
 | Latency / cost | best | ~3x |
 
-The honest reading: on these three broad research queries the split mainly buys
-**traceability and citation discipline**, not raw answer quality. That matches the
+The honest reading: 2.5x latency and 2.6x cost bought **+1.0 point on a heuristic that
+tops out at 10** - and part of that point comes from the heuristic itself rewarding the
+presence of an analysis pass, which the baseline structurally cannot have. Citation
+coverage was already 100% for both arms. What the split genuinely buys on this workload
+is **traceability and per-step guardrails**, not answer quality. That matches the
 guidance in the sources - add agents when the task genuinely decomposes, not by default.
+On a task this size, a single well-prompted call is the better default; the multi-agent
+version earns its keep when a step needs its own retry policy, its own model, or its own
+reviewer.
 
 ## Failure modes hit while building, and the fix
 
@@ -116,7 +134,11 @@ guidance in the sources - add agents when the task genuinely decomposes, not by 
    label output with `[offline-stub]`, so CI and the tests run without secrets and no
    stub output can be mistaken for a model answer.
 
-5. **Terminal rendering hid the citations.** Rich interpreted `[1]` and `[offline-stub]`
+5. **CI failed on an optional dependency.** A test asserted the OpenAI backend is
+   selected when a key is present, but CI installs only the `dev` extra, so the `openai`
+   SDK was missing and the test failed on the runner while passing locally.
+   *Fix:* `pytest.importorskip("openai")`; the offline path stays covered.
+
+6. **Terminal rendering hid the citations.** Rich interpreted `[1]` and `[offline-stub]`
    as markup and silently dropped them - the answer looked uncited when it was not.
    *Fix:* answers are printed via `rich.text.Text`, markup disabled.
-

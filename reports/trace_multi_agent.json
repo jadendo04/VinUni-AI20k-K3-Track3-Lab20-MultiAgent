@@ -134,7 +134,7 @@
   {
     "name": "workflow.completed",
     "payload": {
-      "duration_seconds": 0.24505920899991906,
+      "duration_seconds": 13.54637595800068,
       "detail": "routes=researcher->analyst->writer->critic->done",
       "iterations": 5,
       "errors": []

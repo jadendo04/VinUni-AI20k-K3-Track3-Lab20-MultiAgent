@@ -34,7 +34,7 @@ def test_mock_search_ranks_by_term_overlap(search: SearchClient) -> None:
 
 def test_openai_backend_selected_when_key_present() -> None:
     pytest.importorskip("openai")  # the openai SDK ships in the optional "llm" extra
-    client = LLMClient(settings=Settings(OPENAI_API_KEY="sk-test"))
+    client = LLMClient(settings=Settings(OPENAI_API_KEY="sk-test", OPENAI_BASE_URL=None))
     assert client.backend == "openai"
 
 
