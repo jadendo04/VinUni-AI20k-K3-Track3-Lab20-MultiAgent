@@ -1,5 +1,7 @@
 """Service backend tests."""
 
+import pytest
+
 from multi_agent_research_lab.core.config import Settings
 from multi_agent_research_lab.services.llm_client import (
     OFFLINE_PREFIX,
@@ -31,5 +33,6 @@ def test_mock_search_ranks_by_term_overlap(search: SearchClient) -> None:
 
 
 def test_openai_backend_selected_when_key_present() -> None:
+    pytest.importorskip("openai")  # the openai SDK ships in the optional "llm" extra
     client = LLMClient(settings=Settings(OPENAI_API_KEY="sk-test"))
     assert client.backend == "openai"
