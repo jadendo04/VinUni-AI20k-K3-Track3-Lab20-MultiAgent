@@ -1,0 +1,143 @@
+[
+  {
+    "name": "supervisor.route",
+    "payload": {
+      "next": "researcher",
+      "iteration": 1,
+      "has_sources": false,
+      "has_research_notes": false,
+      "has_analysis_notes": false,
+      "has_final_answer": false,
+      "failures": {}
+    }
+  },
+  {
+    "name": "agent.supervisor",
+    "payload": {
+      "duration_seconds": null,
+      "iteration": 1,
+      "detail": "ok"
+    }
+  },
+  {
+    "name": "agent.researcher",
+    "payload": {
+      "duration_seconds": null,
+      "iteration": 1,
+      "detail": "ok"
+    }
+  },
+  {
+    "name": "supervisor.route",
+    "payload": {
+      "next": "analyst",
+      "iteration": 2,
+      "has_sources": true,
+      "has_research_notes": true,
+      "has_analysis_notes": false,
+      "has_final_answer": false,
+      "failures": {}
+    }
+  },
+  {
+    "name": "agent.supervisor",
+    "payload": {
+      "duration_seconds": null,
+      "iteration": 2,
+      "detail": "ok"
+    }
+  },
+  {
+    "name": "agent.analyst",
+    "payload": {
+      "duration_seconds": null,
+      "iteration": 2,
+      "detail": "ok"
+    }
+  },
+  {
+    "name": "supervisor.route",
+    "payload": {
+      "next": "writer",
+      "iteration": 3,
+      "has_sources": true,
+      "has_research_notes": true,
+      "has_analysis_notes": true,
+      "has_final_answer": false,
+      "failures": {}
+    }
+  },
+  {
+    "name": "agent.supervisor",
+    "payload": {
+      "duration_seconds": null,
+      "iteration": 3,
+      "detail": "ok"
+    }
+  },
+  {
+    "name": "agent.writer",
+    "payload": {
+      "duration_seconds": null,
+      "iteration": 3,
+      "detail": "ok"
+    }
+  },
+  {
+    "name": "supervisor.route",
+    "payload": {
+      "next": "critic",
+      "iteration": 4,
+      "has_sources": true,
+      "has_research_notes": true,
+      "has_analysis_notes": true,
+      "has_final_answer": true,
+      "failures": {}
+    }
+  },
+  {
+    "name": "agent.supervisor",
+    "payload": {
+      "duration_seconds": null,
+      "iteration": 4,
+      "detail": "ok"
+    }
+  },
+  {
+    "name": "agent.critic",
+    "payload": {
+      "duration_seconds": null,
+      "iteration": 4,
+      "detail": "ok"
+    }
+  },
+  {
+    "name": "supervisor.route",
+    "payload": {
+      "next": "done",
+      "iteration": 5,
+      "has_sources": true,
+      "has_research_notes": true,
+      "has_analysis_notes": true,
+      "has_final_answer": true,
+      "failures": {}
+    }
+  },
+  {
+    "name": "agent.supervisor",
+    "payload": {
+      "duration_seconds": null,
+      "iteration": 5,
+      "detail": "ok"
+    }
+  },
+  {
+    "name": "workflow.completed",
+    "payload": {
+      "duration_seconds": 0.24505920899991906,
+      "detail": "routes=researcher->analyst->writer->critic->done",
+      "iterations": 5,
+      "errors": []
+    }
+  }
+]

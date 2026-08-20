@@ -115,3 +115,5 @@ Mỗi nhóm trả lời 2 câu:
 
 1. Case nào nên dùng multi-agent? Vì sao?
 2. Case nào không nên dùng multi-agent? Vì sao?
+
+> Bài nộp của repo này: `docs/exit_ticket.md`.

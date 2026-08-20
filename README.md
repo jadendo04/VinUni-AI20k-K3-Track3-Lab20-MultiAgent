@@ -1,8 +1,10 @@
 # Lab 20: Multi-Agent Research System Starter
 
-Starter repo cho bài lab **Multi-Agent Systems**: xây dựng hệ thống nghiên cứu gồm **Supervisor + Researcher + Analyst + Writer** và benchmark với single-agent baseline.
+Bài lab **Multi-Agent Systems**: hệ thống nghiên cứu gồm **Supervisor + Researcher + Analyst + Writer**, benchmark với single-agent baseline.
 
-> Mục tiêu của repo này là cung cấp **production-grade skeleton** để học viên phát triển code cá nhân. Các phần logic quan trọng được để ở dạng `TODO` để học viên tự triển khai.
+> Repo này là **bản đã hoàn thành** của starter skeleton: toàn bộ `TODO(student)` trong `src/` đã được implement (LLM client, search client, routing policy, 4 agent + critic, LangGraph workflow, tracing, benchmark, report).
+
+**Chạy được không cần API key.** Khi `.env` chưa có `OPENAI_API_KEY` / `TAVILY_API_KEY`, hệ thống tự dùng backend offline deterministic (LLM stub gắn nhãn `[offline-stub]` + mock search corpus) nên test/CI và demo vẫn chạy end-to-end. Có key thì tự động chuyển sang OpenAI + Tavily, không đổi code.
 
 ## Learning outcomes
 
@@ -34,11 +36,11 @@ Trace + Benchmark Report
 ```text
 .
 ├── src/multi_agent_research_lab/
-│   ├── agents/              # Agent interfaces + skeletons
+│   ├── agents/              # Supervisor, Researcher, Analyst, Writer, Critic, Baseline
 │   ├── core/                # Config, state, schemas, errors
-│   ├── graph/               # LangGraph workflow skeleton
+│   ├── graph/               # LangGraph workflow + fallback engine
 │   ├── services/            # LLM, search, storage clients
-│   ├── evaluation/          # Benchmark/evaluation skeleton
+│   ├── evaluation/          # Benchmark + markdown report
 │   ├── observability/       # Logging/tracing hooks
 │   └── cli.py               # CLI entrypoint
 ├── configs/                 # YAML configs for lab variants
@@ -77,27 +79,41 @@ TAVILY_API_KEY=...
 ### 3. Chạy smoke test
 
 ```bash
-make test
+make test        # 34 tests
+make lint        # ruff
+make typecheck   # mypy strict
 python -m multi_agent_research_lab.cli --help
 ```
 
-### 4. Chạy baseline skeleton
+### 4. Chạy single-agent baseline
 
 ```bash
 python -m multi_agent_research_lab.cli baseline \
   --query "Research GraphRAG state-of-the-art and write a 500-word summary"
 ```
 
-Lệnh này chỉ chạy khung baseline tối giản. Học viên cần tự triển khai logic LLM thực tế trong `src/multi_agent_research_lab/services/llm_client.py`.
+Một agent làm tất cả trong đúng 1 LLM call — đây là arm đối chứng của benchmark.
 
-### 5. Chạy multi-agent skeleton
+### 5. Chạy multi-agent workflow
 
 ```bash
 python -m multi_agent_research_lab.cli multi-agent \
-  --query "Research GraphRAG state-of-the-art and write a 500-word summary"
+  --query "Research GraphRAG state-of-the-art and write a 500-word summary" \
+  --trace-out reports/trace_multi_agent.json
 ```
 
-Mặc định lệnh sẽ báo các `TODO` cần làm. Đây là chủ đích của starter repo.
+In `final_answer`, bảng run summary (routes, tokens, cost, errors) và trace từng bước.
+Cờ hữu ích: `--no-critic` (bỏ critic pass), `--no-langgraph` (chạy engine loop nội bộ),
+`--json` (in raw state).
+
+### 6. Chạy benchmark
+
+```bash
+python -m multi_agent_research_lab.cli benchmark
+```
+
+Chạy cùng query set (`configs/lab_default.yaml`) qua cả hai pipeline và ghi
+`reports/benchmark_report.md` (bảng số liệu + phần phân tích tay từ `docs/benchmark_notes.md`).
 
 ## Milestones trong 2 giờ lab
 
@@ -120,32 +136,35 @@ Mặc định lệnh sẽ báo các `TODO` cần làm. Đây là chủ đích c�
 - Không để agent chạy vô hạn: dùng `max_iterations`, `timeout_seconds`.
 - Có benchmark report thay vì chỉ demo output đẹp.
 
-## TODO chính cho học viên
+## Đã implement
 
-Tìm trong code các marker:
+| Phần | File | Ghi chú |
+|---|---|---|
+| LLM client | `services/llm_client.py` | OpenAI + offline backend, retry `tenacity`, timeout, token/cost accounting |
+| Search client | `services/search_client.py` | Tavily (urllib + `certifi`) + mock corpus, tự fallback khi lỗi |
+| Routing policy | `agents/supervisor.py` | Deterministic `decide()`, iteration cap, per-agent retry cap |
+| Worker agents | `agents/researcher.py`, `analyst.py`, `writer.py` | Prompt theo role, citation `[n]`, reference list tự append |
+| Critic (bonus) | `agents/critic.py` | Kiểm citation range, độ dài, đã qua analysis chưa |
+| Baseline | `agents/baseline.py` | Single-agent, 1 LLM call |
+| Workflow | `graph/workflow.py` | LangGraph `StateGraph` + conditional edges; fallback loop engine; `_finalize` luôn trả câu trả lời `[degraded]` thay vì rỗng |
+| Tracing | `observability/tracing.py` | Span nội bộ + LangSmith/Langfuse khi có key + export JSON |
+| Benchmark | `evaluation/benchmark.py`, `report.py` | latency, cost, quality heuristic, citation coverage, failure rate |
 
-```bash
-grep -R "TODO(student)" -n src tests docs
-```
+Guardrails: `max_iterations`, `timeout_seconds`, retry có backoff, skip agent hỏng sau 2 lần
+fail, LangGraph `recursion_limit`, Pydantic validation, critic pass.
 
-Các phần học viên cần tự làm:
-
-1. Implement LLM client.
-2. Implement web/search client hoặc mock search source.
-3. Implement routing decision trong Supervisor.
-4. Implement từng worker agent.
-5. Build LangGraph workflow.
-6. Thêm tracing provider thật: LangSmith, Langfuse hoặc OpenTelemetry.
-7. Viết benchmark report.
+Thiết kế chi tiết: `docs/design_template.md`.
 
 ## Deliverables
 
-Học viên nộp:
-
-1. GitHub repo cá nhân.
-2. Screenshot trace hoặc link trace.
-3. `reports/benchmark_report.md` so sánh single vs multi-agent.
-4. Một đoạn giải thích failure mode và cách fix.
+| Yêu cầu | Trong repo |
+|---|---|
+| Code hoàn chỉnh, lint/test pass | `src/`, `tests/` (34 tests) |
+| Trace evidence | `reports/trace_multi_agent.json` (dùng LangSmith/Langfuse nếu có key) |
+| Benchmark report | `reports/benchmark_report.md` |
+| Failure mode + cách fix | `docs/benchmark_notes.md` |
+| Design doc | `docs/design_template.md` |
+| Exit ticket | `docs/exit_ticket.md` |
 
 ## References
 

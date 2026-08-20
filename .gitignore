@@ -11,3 +11,8 @@ build/
 reports/*.json
 reports/*.md
 !.gitkeep
+!reports/benchmark_report.md
+!reports/trace_multi_agent.json
+
+# IDE
+.idea/
