@@ -40,12 +40,17 @@ def _log_once(message: str) -> None:
 
 OFFLINE_PREFIX = "[offline-stub]"
 
-# USD per 1M tokens. Extend when adding models.
+# USD per 1M tokens (input, output). Extend when adding models.
+# OpenRouter model ids keep their "vendor/" prefix, so both spellings are listed.
 PRICING_USD_PER_MTOK: dict[str, tuple[float, float]] = {
     "gpt-4o-mini": (0.15, 0.60),
     "gpt-4o": (2.50, 10.00),
     "gpt-4.1-mini": (0.40, 1.60),
     "o4-mini": (1.10, 4.40),
+    "openai/gpt-4o-mini": (0.15, 0.60),
+    "openai/gpt-4o": (2.50, 10.00),
+    "anthropic/claude-3.5-haiku": (0.80, 4.00),
+    "meta-llama/llama-3.3-70b-instruct": (0.12, 0.30),
 }
 
 
@@ -84,7 +89,9 @@ class LLMClient:
         self.model = model or self.settings.openai_model
         self.temperature = temperature
         self._client: Any = None if force_offline else self._build_openai_client()
-        self.backend = "openai" if self._client is not None else "offline"
+        self.backend = (
+            "offline" if self._client is None else _backend_name(self.settings.openai_base_url)
+        )
 
     def _build_openai_client(self) -> Any | None:
         if not self.settings.openai_api_key:
@@ -97,6 +104,7 @@ class LLMClient:
             return None
         return OpenAI(
             api_key=self.settings.openai_api_key,
+            base_url=self.settings.openai_base_url,
             timeout=float(self.settings.timeout_seconds),
         )
 
@@ -129,7 +137,13 @@ class LLMClient:
         usage = getattr(response, "usage", None)
         input_tokens = getattr(usage, "prompt_tokens", None)
         output_tokens = getattr(usage, "completion_tokens", None)
-        cost = estimate_cost_usd(self.model, input_tokens or 0, output_tokens or 0)
+        # OpenRouter reports the billed cost on usage; fall back to the price table.
+        reported_cost = getattr(usage, "cost", None)
+        cost = (
+            float(reported_cost)
+            if reported_cost is not None
+            else estimate_cost_usd(self.model, input_tokens or 0, output_tokens or 0)
+        )
         logger.debug(
             "llm call model=%s in=%s out=%s cost=%.6f",
             self.model,
@@ -154,6 +168,14 @@ class LLMClient:
             output_tokens=output_tokens,
             cost_usd=0.0,
         )
+
+
+def _backend_name(base_url: str | None) -> str:
+    """Label the active provider so the report shows where the numbers came from."""
+
+    if base_url and "openrouter" in base_url:
+        return "openrouter"
+    return "openai" if not base_url else "openai-compatible"
 
 
 def _detect_role(system_prompt: str) -> str:

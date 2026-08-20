@@ -76,6 +76,19 @@ LANGSMITH_API_KEY=...
 TAVILY_API_KEY=...
 ```
 
+**Dùng OpenRouter** (hoặc bất kỳ gateway OpenAI-compatible nào — Azure OpenAI, Groq,
+Together, vLLM local): chỉ cần thêm `OPENAI_BASE_URL`, không sửa code.
+
+```bash
+OPENAI_API_KEY=sk-or-...
+OPENAI_BASE_URL=https://openrouter.ai/api/v1
+OPENAI_MODEL=openai/gpt-4o-mini   # hoặc anthropic/claude-3.5-haiku, meta-llama/...
+```
+
+Model id giữ nguyên prefix vendor. Cost lấy trực tiếp từ `usage.cost` do OpenRouter trả
+về; nếu provider không trả thì rơi về bảng giá tĩnh trong `services/llm_client.py`
+(thêm model mới vào `PRICING_USD_PER_MTOK` nếu muốn số chính xác).
+
 ### 3. Chạy smoke test
 
 ```bash

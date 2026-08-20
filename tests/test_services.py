@@ -36,3 +36,16 @@ def test_openai_backend_selected_when_key_present() -> None:
     pytest.importorskip("openai")  # the openai SDK ships in the optional "llm" extra
     client = LLMClient(settings=Settings(OPENAI_API_KEY="sk-test"))
     assert client.backend == "openai"
+
+
+def test_openrouter_backend_selected_from_base_url() -> None:
+    pytest.importorskip("openai")
+    client = LLMClient(
+        settings=Settings(
+            OPENAI_API_KEY="sk-or-test",
+            OPENAI_BASE_URL="https://openrouter.ai/api/v1",
+            OPENAI_MODEL="openai/gpt-4o-mini",
+        )
+    )
+    assert client.backend == "openrouter"
+    assert estimate_cost_usd("openai/gpt-4o-mini", 1_000_000, 0) == 0.15
